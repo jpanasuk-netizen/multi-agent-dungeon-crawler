@@ -1,0 +1,86 @@
+{
+  "level_name": "Crypt of the Fallen Knights",
+  "grid_size": [
+    12,
+    12
+  ],
+  "objects": [
+    {
+      "type": "spawn",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "type": "exit",
+      "x": 11,
+      "y": 11
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 3
+    },
+    {
+      "type": "wall",
+      "x": 4,
+      "y": 5
+    },
+    {
+      "type": "wall",
+      "x": 8,
+      "y": 9
+    },
+    {
+      "type": "enemy",
+      "name": "Skeletal Warrior",
+      "hp": 200,
+      "damage": 25,
+      "speed": 1.8,
+      "x": 6,
+      "y": 7
+    },
+    {
+      "type": "chest",
+      "loot_drop_chance": 0.3,
+      "x": 5,
+      "y": 4
+    },
+    {
+      "type": "enemy",
+      "name": "Skeletal Warrior",
+      "hp": 200,
+      "damage": 25,
+      "speed": 1.8,
+      "x": 9,
+      "y": 3
+    },
+    {
+      "type": "chest",
+      "loot_drop_chance": 0.3,
+      "x": 7,
+      "y": 6
+    }
+  ],
+  "mechanics": {
+    "game_title": "Cursed Crypts",
+    "theme": "Dark Fantasy Dungeon Crawler",
+    "player_hp": 100,
+    "enemies": [
+      {
+        "name": "Skeletal Warrior",
+        "hp": 200,
+        "damage": 25,
+        "speed": 1.8
+      }
+    ],
+    "loot_drop_chance": 0.3
+  },
+  "narrative": {
+    "floor_lore": "The Crypt of the Fallen Knights is a place where ancient warriors lie in eternal slumber. Once revered as protectors of the realm, these knights now serve as guardians of the crypt's dark secrets and treasures. Their spirits are bound to this cursed ground, forever battling those who dare to disturb their peace.",
+    "npc_dialogue": {
+      "npc_name": "Ghostly Squire",
+      "quote": "Beware, intruder! The skeletal warriors you face were once noble knights, now twisted by the curse of the crypt. Only the purest heart can hope to pass through unscathed."
+    },
+    "boss_intro": "As you delve deeper into the Crypt of the Fallen Knights, a chilling presence begins to manifest. From the shadows emerges the spectral form of Sir Thorne, once a valiant knight but now corrupted by dark magic. His eyes glow with an otherworldly light as he prepares to defend his eternal resting place."
+  }
+}

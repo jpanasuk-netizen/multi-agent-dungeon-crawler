@@ -1,0 +1,155 @@
+{
+  "level_name": "Crypt of Shadows",
+  "grid_size": [
+    8,
+    8
+  ],
+  "objects": [
+    {
+      "type": "spawn",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "type": "exit",
+      "x": 7,
+      "y": 7
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 4,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 5,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 3
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 3
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 3
+    },
+    {
+      "type": "wall",
+      "x": 4,
+      "y": 3
+    },
+    {
+      "type": "wall",
+      "x": 5,
+      "y": 3
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 3
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 4
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 4
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 4
+    },
+    {
+      "type": "wall",
+      "x": 4,
+      "y": 4
+    },
+    {
+      "type": "wall",
+      "x": 5,
+      "y": 4
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 4
+    },
+    {
+      "type": "enemy",
+      "name": "Skeletal Warrior",
+      "hp": 75,
+      "damage": 12,
+      "speed": 1.8,
+      "x": 3,
+      "y": 0
+    },
+    {
+      "type": "chest",
+      "loot_drop_chance": 0.3,
+      "x": 4,
+      "y": 6
+    },
+    {
+      "type": "enemy",
+      "name": "Skeletal Warrior",
+      "hp": 75,
+      "damage": 12,
+      "speed": 1.8,
+      "x": 6,
+      "y": 1
+    }
+  ],
+  "mechanics": {
+    "game_title": "Cursed Crypts",
+    "theme": "Dark Fantasy Dungeon Crawler",
+    "player_hp": 100,
+    "enemies": [
+      {
+        "name": "Skeletal Warrior",
+        "hp": 75,
+        "damage": 12,
+        "speed": 1.8
+      }
+    ],
+    "loot_drop_chance": 0.3
+  },
+  "narrative": {
+    "floor_lore": "The Crypt of Shadows is a place where the dead walk and whisper secrets to those who dare enter. The walls are lined with ancient, crumbling stone tablets that tell tales of forgotten heroes and their battles against dark forces. Here, the air is thick with the scent of decay and the sound of bones clattering in the wind.",
+    "npc_dialogue": {
+      "npc_name": "Wandering Scholar",
+      "quote": "Beware the Crypt of Shadows, for it holds more than just the dead. The skeletal warriors you face are but puppets to a greater evil that seeks to reclaim this world from the living."
+    },
+    "boss_intro": "As you delve deeper into the crypt, an eerie silence falls over the area. Suddenly, the ground trembles and a dark figure emerges from the shadows. It is none other than the Necromancer's Shadow, a spectral entity that commands the skeletal warriors to do its bidding. Its eyes glow with malevolent intent as it prepares for battle."
+  }
+}

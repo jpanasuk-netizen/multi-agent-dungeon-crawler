@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic RPG Engine</title>
+    <style>
+        body {
+            background-color: #0f111a;
+            color: #e2e8f0;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .main-layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        canvas {
+            background-color: #1e293b;
+            border: 4px solid #334155;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            outline: none;
+        }
+        .ui-panel {
+            max-width: 380px;
+            width: 100%;
+            background: #1a1d2d;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .stat-bar {
+            background: #0f111a;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            border-left: 4px solid #10b981;
+            line-height: 1.5;
+        }
+        .combat-log {
+            background: #090a0f;
+            color: #10b981;
+            height: 140px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid #2d3748;
+            line-height: 1.4;
+        }
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 45px);
+            grid-template-rows: repeat(3, 45px);
+            gap: 5px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .dbtn {
+            background: #334155;
+            color: #fff;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .dbtn:active {
+            background: #06b6d4;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <h1 id="floor-title" style="color: #e5b25d;">Loading RPG Campaign...</h1>
+
+    <div class="main-layout">
+        <div>
+            <canvas id="gameCanvas" width="400" height="400" tabindex="0"></canvas>
+            
+            <div class="dpad">
+                <div></div>
+                <button class="dbtn" onclick="move(0, -1)">▲</button>
+                <div></div>
+                <button class="dbtn" onclick="move(-1, 0)">◄</button>
+                <button class="dbtn" onclick="move(0, 1)">▼</button>
+                <button class="dbtn" onclick="move(1, 0)">►</button>
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+        </div>
+
+        <div class="ui-panel">
+            <div class="stat-bar" id="stat-display">
+                ❤️ <b>HP:</b> <span id="player-hp">100</span> / 100<br>
+                ⚔️ <b>Atk:</b> <span id="player-atk">15</span> | 🛡️ <b>Armor:</b> <span id="player-armor">0</span><br>
+                🎒 <b>Gear:</b> <span id="player-weapon">Basic Sword</span>
+            </div>
+
+            <div style="color: #e5b25d; font-size: 0.85rem;">🎮 WASD, Arrows, or D-Pad to move.</div>
+            
+            <div style="font-weight:bold; font-size:0.9rem; color:#10b981;">Combat Log:</div>
+            <div id="combat-log" class="combat-log">Initializing engine...</div>
+        </div>
+    </div>
+
+    <script>
+        let campaign = [];
+        let canvas, ctx;
+        let currentFloor = 0;
+        const TILE_SIZE = 40;
+
+        // Persistent Player State with localStorage fallback
+        let player = JSON.parse(localStorage.getItem("rpg_player")) || {
+            x: 0, y: 0,
+            hp: 100, maxHp: 100,
+            atk: 15, armor: 2,
+            weaponName: "Basic Iron Sword"
+        };
+
+        let grid = [];
+        let cols = 10, rows = 10;
+
+        function savePlayer() {
+            localStorage.setItem("rpg_player", JSON.stringify(player));
+            updateStatsUI();
+        }
+
+        function updateStatsUI() {
+            document.getElementById("player-hp").innerText = player.hp;
+            document.getElementById("player-atk").innerText = player.atk;
+            document.getElementById("player-armor").innerText = player.armor;
+            document.getElementById("player-weapon").innerText = player.weaponName;
+        }
+
+        function logMsg(msg) {
+            const log = document.getElementById("combat-log");
+            if (log) {
+                log.innerHTML += "> " + msg + "<br>";
+                log.scrollTop = log.scrollHeight;
+            }
+        }
+
+        async function initCampaign() {
+            logMsg("Fetching level_01.json through level_05.json...");
+            let loadedFloors = [];
+            
+            for (let i = 1; i <= 5; i++) {
+                try {
+                    let res = await fetch(`level_0${i}.json`);
+                    if (res.ok) {
+                        let data = await res.json();
+                        loadedFloors.push(data);
+                    }
+                } catch (e) {
+                    console.log(`Floor ${i} not found.`);
+                }
+            }
+
+            if (loadedFloors.length === 0) {
+                campaign = [{
+                    "level_name": "Fallback Floor",
+                    "grid_size": [8, 8],
+                    "objects": [
+                        {"type": "spawn", "x": 0, "y": 0},
+                        {"type": "exit", "x": 7, "y": 7},
+                        {"type": "chest", "x": 3, "y": 3},
+                        {"type": "enemy", "x": 4, "y": 4}
+                    ]
+                }];
+            } else {
+                campaign = loadedFloors;
+            }
+
+            loadLevel(currentFloor);
+        }
+
+        function loadLevel(idx) {
+            if (idx >= campaign.length) {
+                alert("🏆 LEGENDARY VICTORY! Campaign conquered!");
+                currentFloor = 0;
+                localStorage.removeItem("rpg_player");
+                player.hp = 100; player.atk = 15; player.weaponName = "Basic Iron Sword";
+                savePlayer();
+                loadLevel(0);
+                return;
+            }
+
+            currentFloor = idx;
+            const level = campaign[idx];
+            cols = level.grid_size ? level.grid_size[0] : 10;
+            rows = level.grid_size ? level.grid_size[1] : 10;
+
+            canvas.width = cols * TILE_SIZE;
+            canvas.height = rows * TILE_SIZE;
+
+            grid = Array(rows).fill().map(() => Array(cols).fill("floor"));
+
+            (level.objects || []).forEach(obj => {
+                if (obj.x >= 0 && obj.x < cols && obj.y >= 0 && obj.y < rows) {
+                    grid[obj.y][obj.x] = obj.type;
+                    if (obj.type === "spawn") {
+                        player.x = obj.x;
+                        player.y = obj.y;
+                    }
+                }
+            });
+
+            document.getElementById("floor-title").innerText = `Floor ${idx + 1}/${campaign.length}: ${level.level_name || "Dungeon"}`;
+            savePlayer();
+            logMsg(`=== Entered Floor ${idx + 1}: ${level.level_name || "Dungeon"} ===`);
+            render();
+        }
+
+        function fight(ex, ey) {
+            const lvl = campaign[currentFloor];
+            const enemyList = lvl.mechanics?.enemies || [{"name": "Dungeon Crawler", "hp": 35, "damage": 10}];
+            const enemyTemplate = enemyList[Math.floor(Math.random() * enemyList.length)];
+            
+            let eName = enemyTemplate.name;
+            let eHp = enemyTemplate.hp;
+            const rawDmg = enemyTemplate.damage;
+
+            logMsg(`COMBAT! Attacked by ${eName} (HP: ${eHp})`);
+
+            while (eHp > 0 && player.hp > 0) {
+                eHp -= player.atk;
+                logMsg(`You strike for ${player.atk} dmg!`);
+                if (eHp <= 0) {
+                    logMsg(`<span style=\"color:#10b981\">Defeated ${eName}!</span>`);
+                    grid[ey][ex] = "floor";
+                    break;
+                }
+                
+                // Calculate damage mitigated by armor
+                let netDmg = Math.max(2, rawDmg - player.armor);
+                player.hp -= netDmg;
+                savePlayer();
+                logMsg(`<span style=\"color:#f87171\">${eName} hits you for ${netDmg} dmg!</span>`);
+
+                if (player.hp <= 0) {
+                    alert("You died! Resetting progress...");
+                    localStorage.removeItem("rpg_player");
+                    player.hp = 100; player.atk = 15; player.armor = 2; player.weaponName = "Basic Iron Sword";
+                    currentFloor = 0;
+                    loadLevel(0);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function openChest(ex, ey) {
+            grid.grid ? grid[ey][ex] = "floor" : grid[ey][ex] = "floor";
+            
+            const lootTable = [
+                {name: "Enchanted Broadsword", atkBonus: 8, type: "weapon"},
+                {name: "Steel Chainmail", armorBonus: 4, type: "armor"},
+                {name: "Health Elixir", heal: 40, type: "potion"}
+            ];
+            const loot = lootTable[Math.floor(Math.random() * lootTable.length)];
+
+            if (loot.type === "weapon") {
+                player.atk += loot.atkBonus;
+                player.weaponName = loot.name;
+                logMsg(`<span style=\"color:#f59e0b\">🎁 LOOT! Found ${loot.name} (+${loot.atkBonus} Atk)!</span>`);
+            } else if (loot.type === "armor") {
+                player.armor += loot.armorBonus;
+                logMsg(`<span style=\"color:#f59e0b\">🎁 LOOT! Found ${loot.name} (+${loot.armorBonus} Armor)!</span>`);
+            } else {
+                player.hp = Math.min(player.maxHp, player.hp + loot.heal);
+                logMsg(`<span style=\"color:#f59e0b\">🎁 POTION! Restored ${loot.heal} HP!</span>`);
+            }
+            savePlayer();
+        }
+
+        function move(dx, dy) {
+            if (player.hp <= 0) return;
+            let nx = player.x + dx;
+            let ny = player.y + dy;
+
+            if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) return;
+            const tile = grid[ny][nx];
+
+            if (tile === "wall") return;
+            if (tile === "enemy") {
+                if (!fight(nx, ny)) return;
+            }
+
+            player.x = nx;
+            player.y = ny;
+
+            if (tile === "exit") {
+                loadLevel(currentFloor + 1);
+                return;
+            }
+            if (tile === "chest") {
+                openChest(nx, ny);
+            }
+
+            render();
+        }
+
+        function render() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const tile = grid[y][x];
+                    
+                    ctx.fillStyle = "#1e293b";
+                    if (tile === "wall") ctx.fillStyle = "#334155";
+                    else if (tile === "spawn") ctx.fillStyle = "#064e3b";
+                    else if (tile === "exit") ctx.fillStyle = "#7f1d1d";
+                    
+                    ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = "#0f172a";
+                    ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+
+                    if (tile === "enemy") {
+                        ctx.fillStyle = "#7c3aed";
+                        ctx.beginPath();
+                        ctx.arc(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2, TILE_SIZE/3, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                    if (tile === "chest") {
+                        ctx.fillStyle = "#d97706";
+                        ctx.fillRect(x * TILE_SIZE + 8, y * TILE_SIZE + 12, TILE_SIZE - 16, TILE_SIZE - 20);
+                    }
+                }
+            }
+
+            // Render Player
+            const px = player.x * TILE_SIZE;
+            const py = player.y * TILE_SIZE;
+            ctx.fillStyle = "#06b6d4";
+            ctx.fillRect(px + 4, py + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(px + 4, py + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+        }
+
+        window.onload = function() {
+            canvas = document.getElementById("gameCanvas");
+            ctx = canvas.getContext("2d");
+
+            window.addEventListener("keydown", (e) => {
+                if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") move(0, -1);
+                if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") move(0, 1);
+                if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") move(-1, 0);
+                if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") move(1, 0);
+            });
+
+            initCampaign();
+        };
+    </script>
+</body>
+</html>

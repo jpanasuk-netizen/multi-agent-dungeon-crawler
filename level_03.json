@@ -1,0 +1,80 @@
+{
+  "level_name": "Crypt of Shadows",
+  "grid_size": [
+    10,
+    10
+  ],
+  "objects": [
+    {
+      "type": "spawn",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "type": "exit",
+      "x": 9,
+      "y": 9
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 3
+    },
+    {
+      "type": "wall",
+      "x": 4,
+      "y": 5
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 7
+    },
+    {
+      "type": "enemy",
+      "name": "Skeletal Warrior",
+      "hp": 75,
+      "damage": 12,
+      "speed": 1.8,
+      "x": 3,
+      "y": 4
+    },
+    {
+      "type": "chest",
+      "loot_drop_chance": 0.3,
+      "x": 5,
+      "y": 6
+    },
+    {
+      "type": "enemy",
+      "name": "Skeletal Warrior",
+      "hp": 75,
+      "damage": 12,
+      "speed": 1.8,
+      "x": 7,
+      "y": 8
+    }
+  ],
+  "mechanics": {
+    "game_title": "Cursed Crypts",
+    "theme": "Dark Fantasy Dungeon Crawler",
+    "player_hp": 100,
+    "enemies": [
+      {
+        "name": "Skeletal Warrior",
+        "hp": 75,
+        "damage": 12,
+        "speed": 1.8
+      }
+    ],
+    "loot_drop_chance": 0.3
+  },
+  "narrative": {
+    "floor_lore": "The Crypt of Shadows is a place where the dead walk and the living dare not tread. Here, ancient bones tell tales of forgotten battles and lost souls that have been trapped in an eternal struggle against the darkness.",
+    "npc_dialogue": {
+      "npc_name": "Wraith Keeper",
+      "quote": "Beware, intruder! The Crypt is a realm where the dead hold dominion over the living. You must be strong to face what lies ahead."
+    },
+    "boss_intro": "As you delve deeper into the Crypt of Shadows, an eerie silence falls upon the air. Suddenly, the ground trembles and from the shadows emerges the skeletal form of the Necromancer's Champion, a fearsome warrior clad in tattered armor and wielding a sword that gleams with dark magic."
+  }
+}

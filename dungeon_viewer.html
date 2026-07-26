@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon Campaign Viewer</title>
+    <style>
+        :root {
+            --bg-dark: #0f111a;
+            --panel-bg: #1a1d2d;
+            --accent-gold: #e5b25d;
+            --text-light: #e2e8f0;
+            --wall-color: #334155;
+            --floor-color: #1e293b;
+        }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--accent-gold);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .floor-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .floor-btn {
+            background: var(--panel-bg);
+            color: var(--text-light);
+            border: 2px solid #334155;
+            padding: 10px 20px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .floor-btn:hover, .floor-btn.active {
+            background: var(--accent-gold);
+            color: #000;
+            border-color: var(--accent-gold);
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            max-width: 1100px;
+            width: 100%;
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #2d3748;
+        }
+
+        .grid-container {
+            display: grid;
+            gap: 4px;
+            background: #090a0f;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #334155;
+        }
+
+        .cell {
+            width: 42px;
+            height: 42px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            background-color: var(--floor-color);
+            user-select: none;
+            transition: transform 0.1s;
+        }
+
+        .cell:hover {
+            transform: scale(1.08);
+            z-index: 2;
+        }
+
+        .cell.wall { background-color: var(--wall-color); }
+        .cell.spawn { background-color: #16a34a; box-shadow: 0 0 10px #16a34a; }
+        .cell.exit { background-color: #dc2626; box-shadow: 0 0 10px #dc2626; }
+        .cell.enemy { background-color: #7c3aed; }
+        .cell.chest { background-color: #d97706; }
+
+        .details-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .card {
+            background: #11131f;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-gold);
+        }
+
+        .card h3 {
+            margin: 0 0 8px 0;
+            color: var(--accent-gold);
+            font-size: 1.1rem;
+        }
+
+        .quote {
+            font-style: italic;
+            color: #94a3b8;
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-badge {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Dungeon Campaign Inspector</h1>
+    
+    <div class="floor-selector" id="floor-buttons"></div>
+
+    <div class="container">
+        <div>
+            <div id="grid" class="grid-container"></div>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-badge" style="background:#16a34a"></div> Spawn</div>
+                <div class="legend-item"><div class="legend-badge" style="background:#dc2626"></div> Exit</div>
+                <div class="legend-item"><div class="legend-badge" style="background:#334155"></div> Wall</div>
+                <div class="legend-item"><div class="legend-badge" style="background:#7c3aed"></div> Enemy</div>
+                <div class="legend-item"><div class="legend-badge" style="background:#d97706"></div> Chest</div>
+            </div>
+        </div>
+
+        <div class="details-panel">
+            <div class="card">
+                <h3 id="level-title">Level Title</h3>
+                <p id="level-lore" style="margin:0; line-height:1.5;">Floor lore will appear here...</p>
+            </div>
+
+            <div class="card" style="border-left-color: #38bdf8;">
+                <h3 style="color:#38bdf8" id="npc-name">NPC Guide</h3>
+                <p id="npc-quote" class="quote">"Dialogue..."</p>
+            </div>
+
+            <div class="card" style="border-left-color: #ef4444;">
+                <h3 style="color:#ef4444">Boss Warning</h3>
+                <p id="boss-intro" style="margin:0;">Boss intro text...</p>
+            </div>
+
+            <div class="card" style="border-left-color: #a855f7;">
+                <h3 style="color:#a855f7">Mechanics & Stats</h3>
+                <div id="mechanics-info" style="font-size: 0.95rem; line-height:1.6;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const campaignData = [{"level_name": "Crypt Entrance", "grid_size": [8, 8], "objects": [{"type": "spawn", "x": 0, "y": 0}, {"type": "exit", "x": 7, "y": 7}, {"type": "wall", "x": 1, "y": 2}, {"type": "wall", "x": 2, "y": 2}, {"type": "wall", "x": 3, "y": 2}, {"type": "wall", "x": 4, "y": 2}, {"type": "wall", "x": 5, "y": 2}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 50, "damage": 10, "speed": 1.5, "x": 3, "y": 4}, {"type": "chest", "loot_drop_chance": 0.25, "x": 6, "y": 3}, {"type": "wall", "x": 7, "y": 0}, {"type": "wall", "x": 7, "y": 1}, {"type": "wall", "x": 6, "y": 5}, {"type": "wall", "x": 6, "y": 6}], "mechanics": {"game_title": "Cursed Crypts", "theme": "Dark Fantasy Dungeon Crawler", "player_hp": 100, "enemies": [{"name": "Skeletal Warrior", "hp": 50, "damage": 10, "speed": 1.5}], "loot_drop_chance": 0.25}, "narrative": {"floor_lore": "The Crypt Entrance is a foreboding place where the first steps into the unknown are taken. The air here is thick with the scent of decay and the whispers of ancient curses. The walls, carved from dark stone, bear the faded symbols of forgotten rituals. Here lies the beginning of your journey through the crypts, where the dead walk and the living dare not tread.", "npc_dialogue": {"npc_name": "Old Grizzlemaw", "quote": "Beware, young traveler! The Crypt Entrance is but a gateway to horrors beyond imagining. Only those with courage and strength shall return from its depths. Take heed of the skeletal warriors that guard these halls; they are relentless in their pursuit of intruders."}, "boss_intro": "As you delve deeper into the crypt, an eerie silence falls over the corridor ahead. Suddenly, a chilling voice echoes through the darkness: 'So, another fool has come to challenge me? I am the Guardian of the Crypts, and my duty is to protect what lies within. Prepare yourself for your final trial!'"}}, {"level_name": "Crypt of Shadows", "grid_size": [8, 8], "objects": [{"type": "spawn", "x": 0, "y": 0}, {"type": "exit", "x": 7, "y": 7}, {"type": "wall", "x": 1, "y": 3}, {"type": "wall", "x": 2, "y": 3}, {"type": "wall", "x": 3, "y": 3}, {"type": "wall", "x": 4, "y": 3}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8, "x": 6, "y": 4}, {"type": "chest", "loot_drop_chance": 0.3, "x": 3, "y": 5}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8, "x": 4, "y": 6}], "mechanics": {"game_title": "Cursed Crypts", "theme": "Dark Fantasy Dungeon Crawler", "player_hp": 100, "enemies": [{"name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8}], "loot_drop_chance": 0.3}, "narrative": {"floor_lore": "The Crypt of Shadows is a place where the dead refuse to rest. Here, skeletal warriors rise from their graves under the command of dark sorcerers seeking power over the living and the dead alike.", "npc_dialogue": {"npc_name": "Wandering Scholar", "quote": "Beware the crypt's shadows for they hold more than just bones. The whispers you hear are not merely wind, but the voices of those who have fallen to the necromancers' curse."}, "boss_intro": "As you delve deeper into the Crypt of Shadows, a chilling presence begins to manifest. From the darkness emerges the Necromancer's Champion, an ancient skeletal warrior clad in rusted armor and wielding a sword that glows with a sickly green light. Its eyes, sockets filled with shadows, fixate on you with an unyielding gaze."}}, {"level_name": "Crypt of the Fallen Knights", "grid_size": [10, 10], "objects": [{"type": "spawn", "x": 0, "y": 0}, {"type": "exit", "x": 9, "y": 9}, {"type": "wall", "x": 2, "y": 3}, {"type": "wall", "x": 4, "y": 5}, {"type": "wall", "x": 6, "y": 7}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8, "x": 3, "y": 4}, {"type": "chest", "loot_drop_chance": 0.3, "x": 5, "y": 6}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8, "x": 7, "y": 8}], "mechanics": {"game_title": "Cursed Crypts", "theme": "Dark Fantasy Dungeon Crawler", "player_hp": 100, "enemies": [{"name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8}], "loot_drop_chance": 0.3}, "narrative": {"floor_lore": "The Crypt of the Fallen Knights is a place where ancient warriors lie in eternal slumber. Once a grand hall for the elite knights who guarded this land, it now serves as a tomb filled with the skeletal remains of those who fell to dark magic centuries ago. The air is thick with an eerie silence broken only by the distant clinking of bones and whispers of forgotten battles.", "npc_dialogue": {"npc_name": "Wandering Scholar", "quote": "Beware, traveler! This crypt holds more than just the remains of fallen knights. It is said that a powerful sorcerer cursed these warriors to guard his secrets eternally. Only those pure of heart and strong in spirit can pass through unscathed."}, "boss_intro": "As you reach the deepest chamber of the Crypt, the ground trembles beneath your feet. From the shadows emerges the spectral form of Sir Aric, once a noble knight but now twisted by dark magic. His eyes glow with an otherworldly light as he raises his sword, ready to defend the crypt's secrets."}}, {"level_name": "Crypt of Shadows", "grid_size": [12, 12], "objects": [{"type": "spawn", "x": 0, "y": 0}, {"type": "exit", "x": 11, "y": 11}, {"type": "wall", "x": 5, "y": 2}, {"type": "wall", "x": 6, "y": 2}, {"type": "wall", "x": 7, "y": 2}, {"type": "wall", "x": 5, "y": 3}, {"type": "wall", "x": 6, "y": 3}, {"type": "wall", "x": 7, "y": 3}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 200, "damage": 25, "speed": 1.8, "x": 4, "y": 6}, {"type": "chest", "loot_drop_chance": 0.3, "x": 9, "y": 7}, {"type": "wall", "x": 1, "y": 8}, {"type": "wall", "x": 2, "y": 8}, {"type": "wall", "x": 3, "y": 8}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 200, "damage": 25, "speed": 1.8, "x": 7, "y": 4}, {"type": "chest", "loot_drop_chance": 0.3, "x": 6, "y": 9}], "mechanics": {"game_title": "Cursed Crypts", "theme": "Dark Fantasy Dungeon Crawler", "player_hp": 100, "enemies": [{"name": "Skeletal Warrior", "hp": 200, "damage": 25, "speed": 1.8}], "loot_drop_chance": 0.3}, "narrative": {"floor_lore": "The Crypt of Shadows is a place where the dead refuse to rest. Here, skeletal warriors rise from their graves under the command of an ancient necromancer's will. The air is thick with the stench of decay and the whispers of forgotten souls.", "npc_dialogue": {"npc_name": "Wandering Scholar", "quote": "Beware the Crypt of Shadows, for it holds more than just bones and rot. Legends speak of a powerful artifact hidden within these walls, said to grant immortality to its wielder but also to curse them with eternal torment."}, "boss_intro": "As you delve deeper into the crypt, an eerie silence falls over the area. Suddenly, the ground trembles as if something massive is stirring beneath your feet. From the shadows emerges a towering skeletal figure, its eyes glowing with malevolent intent. The air crackles with dark energy as it prepares to unleash its wrath upon any who dare disturb its domain."}}, {"level_name": "Crypt of the Fallen Knights", "grid_size": [12, 12], "objects": [{"type": "spawn", "x": 0, "y": 0}, {"type": "exit", "x": 11, "y": 11}, {"type": "wall", "x": 1, "y": 1}, {"type": "wall", "x": 2, "y": 1}, {"type": "wall", "x": 3, "y": 1}, {"type": "wall", "x": 4, "y": 1}, {"type": "wall", "x": 5, "y": 1}, {"type": "wall", "x": 6, "y": 1}, {"type": "wall", "x": 7, "y": 1}, {"type": "wall", "x": 8, "y": 1}, {"type": "wall", "x": 9, "y": 1}, {"type": "wall", "x": 10, "y": 1}, {"type": "wall", "x": 1, "y": 2}, {"type": "wall", "x": 2, "y": 2}, {"type": "wall", "x": 3, "y": 2}, {"type": "wall", "x": 4, "y": 2}, {"type": "wall", "x": 5, "y": 2}, {"type": "wall", "x": 6, "y": 2}, {"type": "wall", "x": 7, "y": 2}, {"type": "wall", "x": 8, "y": 2}, {"type": "wall", "x": 9, "y": 2}, {"type": "wall", "x": 10, "y": 2}, {"type": "wall", "x": 1, "y": 3}, {"type": "wall", "x": 2, "y": 3}, {"type": "wall", "x": 3, "y": 3}, {"type": "wall", "x": 4, "y": 3}, {"type": "wall", "x": 5, "y": 3}, {"type": "wall", "x": 6, "y": 3}, {"type": "wall", "x": 7, "y": 3}, {"type": "wall", "x": 8, "y": 3}, {"type": "wall", "x": 9, "y": 3}, {"type": "wall", "x": 10, "y": 3}, {"type": "wall", "x": 1, "y": 4}, {"type": "wall", "x": 2, "y": 4}, {"type": "wall", "x": 3, "y": 4}, {"type": "wall", "x": 4, "y": 4}, {"type": "wall", "x": 5, "y": 4}, {"type": "wall", "x": 6, "y": 4}, {"type": "wall", "x": 7, "y": 4}, {"type": "wall", "x": 8, "y": 4}, {"type": "wall", "x": 9, "y": 4}, {"type": "wall", "x": 10, "y": 4}, {"type": "wall", "x": 1, "y": 5}, {"type": "wall", "x": 2, "y": 5}, {"type": "wall", "x": 3, "y": 5}, {"type": "wall", "x": 4, "y": 5}, {"type": "wall", "x": 5, "y": 5}, {"type": "wall", "x": 6, "y": 5}, {"type": "wall", "x": 7, "y": 5}, {"type": "wall", "x": 8, "y": 5}, {"type": "wall", "x": 9, "y": 5}, {"type": "wall", "x": 10, "y": 5}, {"type": "wall", "x": 1, "y": 6}, {"type": "wall", "x": 2, "y": 6}, {"type": "wall", "x": 3, "y": 6}, {"type": "wall", "x": 4, "y": 6}, {"type": "wall", "x": 5, "y": 6}, {"type": "wall", "x": 6, "y": 6}, {"type": "wall", "x": 7, "y": 6}, {"type": "wall", "x": 8, "y": 6}, {"type": "wall", "x": 9, "y": 6}, {"type": "wall", "x": 10, "y": 6}, {"type": "wall", "x": 1, "y": 7}, {"type": "wall", "x": 2, "y": 7}, {"type": "wall", "x": 3, "y": 7}, {"type": "wall", "x": 4, "y": 7}, {"type": "wall", "x": 5, "y": 7}, {"type": "wall", "x": 6, "y": 7}, {"type": "wall", "x": 7, "y": 7}, {"type": "wall", "x": 8, "y": 7}, {"type": "wall", "x": 9, "y": 7}, {"type": "wall", "x": 10, "y": 7}, {"type": "wall", "x": 1, "y": 8}, {"type": "wall", "x": 2, "y": 8}, {"type": "wall", "x": 3, "y": 8}, {"type": "wall", "x": 4, "y": 8}, {"type": "wall", "x": 5, "y": 8}, {"type": "wall", "x": 6, "y": 8}, {"type": "wall", "x": 7, "y": 8}, {"type": "wall", "x": 8, "y": 8}, {"type": "wall", "x": 9, "y": 8}, {"type": "wall", "x": 10, "y": 8}, {"type": "wall", "x": 1, "y": 9}, {"type": "wall", "x": 2, "y": 9}, {"type": "wall", "x": 3, "y": 9}, {"type": "wall", "x": 4, "y": 9}, {"type": "wall", "x": 5, "y": 9}, {"type": "wall", "x": 6, "y": 9}, {"type": "wall", "x": 7, "y": 9}, {"type": "wall", "x": 8, "y": 9}, {"type": "wall", "x": 9, "y": 9}, {"type": "wall", "x": 10, "y": 9}, {"type": "wall", "x": 1, "y": 10}, {"type": "wall", "x": 2, "y": 10}, {"type": "wall", "x": 3, "y": 10}, {"type": "wall", "x": 4, "y": 10}, {"type": "wall", "x": 5, "y": 10}, {"type": "wall", "x": 6, "y": 10}, {"type": "wall", "x": 7, "y": 10}, {"type": "wall", "x": 8, "y": 10}, {"type": "wall", "x": 9, "y": 10}, {"type": "wall", "x": 10, "y": 10}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 250, "damage": 20, "speed": 1.8, "x": 3, "y": 4}, {"type": "chest", "loot_drop_chance": 0.35, "x": 6, "y": 7}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 250, "damage": 20, "speed": 1.8, "x": 9, "y": 4}], "mechanics": {"game_title": "Cursed Crypts", "theme": "Dark Fantasy Dungeon Crawler", "player_hp": 100, "enemies": [{"name": "Skeletal Warrior", "hp": 250, "damage": 20, "speed": 1.8}], "loot_drop_chance": 0.35}, "narrative": {"floor_lore": "The Crypt of the Fallen Knights is a place where the spirits of ancient warriors lie restless. Once a grand hall for heroes, it now serves as a prison for their tormented souls, bound to defend this cursed ground against all intruders.", "npc_dialogue": {"npc_name": "Ghostly Sentinel", "quote": "You dare tread upon hallowed grounds? I am the Ghostly Sentinel, protector of the fallen knights. Your intrusion will not go unpunished."}, "boss_intro": "As you delve deeper into the crypt, a chilling wind whispers through the ancient stones. Suddenly, the ground trembles and the air grows cold as the ghostly figure of Sir Alistair emerges from the shadows. His eyes burn with an otherworldly fire, and his skeletal armor glows faintly in the dim light. 'I am Sir Alistair, once a noble knight but now cursed to guard this crypt forevermore. You shall not leave here alive.'"}}];
+
+        function loadFloor(index) {
+            const level = campaignData[index];
+            if (!level) return;
+
+            // Highlight Active Button
+            document.querySelectorAll(".floor-btn").forEach((btn, idx) => {
+                btn.classList.toggle("active", idx === index);
+            });
+
+            // Set Grid Size
+            const gridSize = level.grid_size || [10, 10];
+            const cols = gridSize[0];
+            const rows = gridSize[1];
+            const gridEl = document.getElementById("grid");
+            gridEl.style.gridTemplateColumns = `repeat(${cols}, 42px)`;
+            gridEl.innerHTML = "";
+
+            // Create Map Lookup
+            const mapData = {};
+            (level.objects || []).forEach(obj => {
+                mapData[`${obj.x},${obj.y}`] = obj.type;
+            });
+
+            // Icons
+            const icons = {
+                spawn: "S", exit: "E", wall: "", enemy: "💀", chest: "📦"
+            };
+
+            // Render Cells
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const cell = document.createElement("div");
+                    cell.className = "cell";
+                    const type = mapData[`${x},${y}`];
+                    
+                    if (type) {
+                        cell.classList.add(type);
+                        cell.innerText = icons[type] || "";
+                    }
+                    cell.title = `(${x}, ${y}) ${type || "floor"}`;
+                    gridEl.appendChild(cell);
+                }
+            }
+
+            // Render Details
+            const nar = level.narrative || {};
+            const mec = level.mechanics || {};
+            const npc = nar.npc_dialogue || {};
+
+            document.getElementById("level-title").innerText = `Floor ${index + 1}: ${level.level_name || "Dungeon Floor"}`;
+            document.getElementById("level-lore").innerText = nar.floor_lore || "No lore available.";
+            document.getElementById("npc-name").innerText = `NPC: ${npc.npc_name || "Guide"}`;
+            document.getElementById("npc-quote").innerText = `"${npc.quote || "Stay vigilant."}"`;
+            document.getElementById("boss-intro").innerText = nar.boss_intro || "A heavy silence fills the room...";
+
+            // Render Stats
+            const enemies = (mec.enemies || []).map(e => `${e.name} (HP: ${e.hp}, DMG: ${e.damage})`).join("<br>");
+            document.getElementById("mechanics-info").innerHTML = `
+                <strong>Theme:</strong> ${mec.theme || "Dark Fantasy"}<br>
+                <strong>Player Starting HP:</strong> ${mec.player_hp || 100}<br>
+                <strong>Loot Drop Chance:</strong> ${(mec.loot_drop_chance || 0) * 100}%<br>
+                <strong>Enemies:</strong><br>${enemies || "None"}
+            `;
+        }
+
+        // Initialize Buttons
+        const btnContainer = document.getElementById("floor-buttons");
+        campaignData.forEach((lvl, idx) => {
+            const btn = document.createElement("button");
+            btn.className = "floor-btn";
+            btn.innerText = `Floor ${idx + 1}`;
+            btn.onclick = () => loadFloor(idx);
+            btnContainer.appendChild(btn);
+        });
+
+        // Load First Floor
+        if (campaignData.length > 0) loadFloor(0);
+    </script>
+</body>
+</html>

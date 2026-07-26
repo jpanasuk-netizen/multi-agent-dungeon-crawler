@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Playable Dungeon Runtime</title>
+    <style>
+        body {
+            background-color: #0f111a;
+            color: #e2e8f0;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .main-layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        canvas {
+            background-color: #000000;
+            border: 4px solid #334155;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .ui-panel {
+            max-width: 400px;
+            width: 100%;
+            background: #1a1d2d;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .stat-bar {
+            background: #0f111a;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 1rem;
+            border-left: 4px solid #10b981;
+        }
+        .combat-log {
+            background: #090a0f;
+            color: #10b981;
+            height: 140px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid #2d3748;
+            line-height: 1.4;
+        }
+        .chat-box {
+            background: #090a0f;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .chat-history {
+            height: 120px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            color: #38bdf8;
+            line-height: 1.3;
+        }
+        .chat-input-container {
+            display: flex;
+            gap: 6px;
+        }
+        input[type="text"] {
+            flex: 1;
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #fff;
+            padding: 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #1d4ed8; }
+        .controls { color: #e5b25d; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <h1 id="floor-title" style="color: #e5b25d;">Initializing Engine...</h1>
+
+    <div class="main-layout">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+        <div class="ui-panel">
+            <div class="stat-bar">
+                ❤️ <b>HP:</b> <span id="player-hp">100</span> / 100 | ⚔️ <b>Atk:</b> 15<br>
+                👁️ <b>Vision:</b> 3 Tiles
+            </div>
+
+            <div class="controls">🎮 <b>WASD / Arrow Keys</b> to move</div>
+            
+            <div class="chat-box">
+                <div style="color:#38bdf8; font-weight:bold;" id="chat-header">💬 Live AI Dialogue (Ollama)</div>
+                <div id="chat-history" class="chat-history">Walk next to an NPC or boss to chat...</div>
+                <div class="chat-input-container">
+                    <input type="text" id="chat-input" placeholder="Type a message...">
+                    <button id="send-btn" onclick="sendChatMessage()">Send</button>
+                </div>
+            </div>
+
+            <div style="font-weight:bold; font-size:0.9rem; color:#10b981;">Combat Log:</div>
+            <div id="combat-log" class="combat-log">Awaiting action...</div>
+        </div>
+    </div>
+
+    <script>
+        const campaign = [{"level_name": "Crypt Entrance", "grid_size": [8, 8], "objects": [{"type": "spawn", "x": 0, "y": 0}, {"type": "exit", "x": 7, "y": 7}, {"type": "wall", "x": 1, "y": 2}, {"type": "wall", "x": 2, "y": 2}, {"type": "wall", "x": 3, "y": 2}, {"type": "wall", "x": 4, "y": 2}, {"type": "wall", "x": 5, "y": 2}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 50, "damage": 10, "speed": 1.5, "x": 3, "y": 4}, {"type": "chest", "loot_drop_chance": 0.25, "x": 6, "y": 3}, {"type": "wall", "x": 7, "y": 1}, {"type": "wall", "x": 6, "y": 4}, {"type": "wall", "x": 5, "y": 5}, {"type": "wall", "x": 4, "y": 6}], "mechanics": {"game_title": "Cursed Crypts", "theme": "Dark Fantasy Dungeon Crawler", "player_hp": 100, "enemies": [{"name": "Skeletal Warrior", "hp": 50, "damage": 10, "speed": 1.5}], "loot_drop_chance": 0.25}, "narrative": {"floor_lore": "The Crypt Entrance is a foreboding place where the first whispers of darkness begin. The air is thick with the scent of decay and the distant echo of ancient chants can be heard, hinting at the secrets buried within.", "npc_dialogue": {"npc_name": "Old Grizzlemaw", "quote": "Beware, young adventurer! This crypt holds more than just bones. The skeletal warriors are but puppets to a greater evil. Proceed with caution and keep your wits about you."}, "boss_intro": "As you delve deeper into the Crypt Entrance, an eerie silence falls over the area. Suddenly, the ground trembles and from the shadows emerges the first guardian of this realm: a towering skeletal warrior known as Bone Sentinel. Its eyes glow with an unnatural light, signaling its readiness to defend the crypt's secrets."}}, {"level_name": "Crypt of Shadows", "grid_size": [8, 8], "objects": [{"type": "spawn", "x": 0, "y": 0}, {"type": "exit", "x": 7, "y": 7}, {"type": "wall", "x": 1, "y": 2}, {"type": "wall", "x": 2, "y": 2}, {"type": "wall", "x": 3, "y": 2}, {"type": "wall", "x": 4, "y": 2}, {"type": "wall", "x": 5, "y": 2}, {"type": "wall", "x": 6, "y": 2}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8, "x": 3, "y": 0}, {"type": "chest", "loot_drop_chance": 0.3, "x": 4, "y": 6}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8, "x": 6, "y": 3}], "mechanics": {"game_title": "Cursed Crypts", "theme": "Dark Fantasy Dungeon Crawler", "player_hp": 100, "enemies": [{"name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8}], "loot_drop_chance": 0.3}, "narrative": {"floor_lore": "The Crypt of Shadows is a place where the dead are not at peace. Here, the bones of fallen warriors have been reanimated by dark magic to serve an unknown master. The air is thick with the scent of decay and the whispers of forgotten souls.", "npc_dialogue": {"npc_name": "Wandering Scholar", "quote": "Beware the Crypt of Shadows! It is said that those who enter do not return as they were, for the shadows twist their very essence. I have seen the skeletal warriors with my own eyes; they are but hollow shells driven by an unyielding hatred."}, "boss_intro": "As you delve deeper into the crypt, a chilling presence begins to permeate the air. Suddenly, from the depths of shadow emerges the Lich Guardian, its eyes glowing with malevolent intent. It speaks in a voice that echoes through time: 'You have trespassed upon my domain. Feel the wrath of the eternal dead!'"}}, {"level_name": "Crypt of the Fallen", "grid_size": [10, 10], "objects": [{"type": "spawn", "x": 0, "y": 0}, {"type": "exit", "x": 9, "y": 9}, {"type": "wall", "x": 2, "y": 3}, {"type": "wall", "x": 4, "y": 5}, {"type": "wall", "x": 7, "y": 1}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8, "x": 3, "y": 6}, {"type": "chest", "loot_drop_chance": 0.3, "x": 5, "y": 4}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8, "x": 6, "y": 2}, {"type": "chest", "loot_drop_chance": 0.3, "x": 1, "y": 7}], "mechanics": {"game_title": "Cursed Crypts", "theme": "Dark Fantasy Dungeon Crawler", "player_hp": 100, "enemies": [{"name": "Skeletal Warrior", "hp": 75, "damage": 12, "speed": 1.8}], "loot_drop_chance": 0.3}, "narrative": {"floor_lore": "The Crypt of the Fallen is a place where the souls of warriors who fell in battle are trapped. The air here is thick with an eerie silence, broken only by the distant clinking of bones and the occasional whisper of ancient curses.", "npc_dialogue": {"npc_name": "Wandering Shade", "quote": "Seeker of light, why do you tread upon this cursed ground? Know that each step brings you closer to the eternal darkness. The skeletal warriors who guard these halls were once mighty soldiers, now bound by an ancient curse to protect their fallen lord's tomb."}, "boss_intro": "As you approach the heart of the crypt, a chilling voice booms from the shadows: 'Halt, intruder! You dare disturb the eternal slumber of Lord Malakar. Prepare to face his wrath!' The ground trembles as the skeletal remains of Lord Malakar rise from their resting place, wielding an ancient sword that glows with a malevolent energy."}}, {"level_name": "Crypt of the Fallen Knights", "grid_size": [12, 12], "objects": [{"type": "spawn", "x": 0, "y": 0}, {"type": "exit", "x": 11, "y": 11}, {"type": "wall", "x": 1, "y": 1}, {"type": "wall", "x": 2, "y": 1}, {"type": "wall", "x": 3, "y": 1}, {"type": "wall", "x": 4, "y": 1}, {"type": "wall", "x": 5, "y": 1}, {"type": "wall", "x": 6, "y": 1}, {"type": "wall", "x": 7, "y": 1}, {"type": "wall", "x": 8, "y": 1}, {"type": "wall", "x": 9, "y": 1}, {"type": "wall", "x": 10, "y": 1}, {"type": "wall", "x": 1, "y": 2}, {"type": "wall", "x": 2, "y": 2}, {"type": "wall", "x": 3, "y": 2}, {"type": "wall", "x": 4, "y": 2}, {"type": "wall", "x": 5, "y": 2}, {"type": "wall", "x": 6, "y": 2}, {"type": "wall", "x": 7, "y": 2}, {"type": "wall", "x": 8, "y": 2}, {"type": "wall", "x": 9, "y": 2}, {"type": "wall", "x": 1, "y": 3}, {"type": "wall", "x": 2, "y": 3}, {"type": "wall", "x": 3, "y": 3}, {"type": "wall", "x": 4, "y": 3}, {"type": "wall", "x": 5, "y": 3}, {"type": "wall", "x": 6, "y": 3}, {"type": "wall", "x": 7, "y": 3}, {"type": "wall", "x": 8, "y": 3}, {"type": "wall", "x": 1, "y": 4}, {"type": "wall", "x": 2, "y": 4}, {"type": "wall", "x": 3, "y": 4}, {"type": "wall", "x": 4, "y": 4}, {"type": "wall", "x": 5, "y": 4}, {"type": "wall", "x": 6, "y": 4}, {"type": "wall", "x": 7, "y": 4}, {"type": "wall", "x": 1, "y": 5}, {"type": "wall", "x": 2, "y": 5}, {"type": "wall", "x": 3, "y": 5}, {"type": "wall", "x": 4, "y": 5}, {"type": "wall", "x": 5, "y": 5}, {"type": "wall", "x": 6, "y": 5}, {"type": "wall", "x": 1, "y": 6}, {"type": "wall", "x": 2, "y": 6}, {"type": "wall", "x": 3, "y": 6}, {"type": "wall", "x": 4, "y": 6}, {"type": "wall", "x": 1, "y": 7}, {"type": "wall", "x": 2, "y": 7}, {"type": "wall", "x": 3, "y": 7}, {"type": "wall", "x": 1, "y": 8}, {"type": "wall", "x": 2, "y": 8}, {"type": "wall", "x": 1, "y": 9}, {"type": "wall", "x": 2, "y": 9}, {"type": "wall", "x": 10, "y": 3}, {"type": "wall", "x": 10, "y": 4}, {"type": "wall", "x": 10, "y": 5}, {"type": "wall", "x": 10, "y": 6}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 200, "damage": 25, "speed": 1.8, "x": 3, "y": 7}, {"type": "chest", "loot_drop_chance": 0.3, "x": 6, "y": 4}, {"type": "chest", "loot_drop_chance": 0.3, "x": 8, "y": 5}], "mechanics": {"game_title": "Cursed Crypts", "theme": "Dark Fantasy Dungeon Crawler", "player_hp": 100, "enemies": [{"name": "Skeletal Warrior", "hp": 200, "damage": 25, "speed": 1.8}], "loot_drop_chance": 0.3}, "narrative": {"floor_lore": "The Crypt of the Fallen Knights is a place where the spirits of defeated warriors linger in eternal torment. The air here is thick with the stench of decay and the whispers of lost souls, urging you to join their ranks. As you descend deeper into this forsaken realm, shadows grow longer and colder, hinting at the malevolent presence that guards its secrets.", "npc_dialogue": {"npc_name": "Ghostly Sentinel", "quote": "Stranger, why do you tread upon these hallowed grounds? The knights who once guarded this crypt now serve as mere echoes of their former selves. Beware, for the darkness within seeks to claim your soul."}, "boss_intro": "As you reach the heart of the Crypt, a chilling presence fills the air. From the shadows emerges the spectral form of Sir Aric, the fallen knight who once protected this sacred ground. His eyes glow with an otherworldly light as he raises his sword, ready to challenge any who dare disturb his eternal vigil."}}, {"level_name": "Crypt of the Fallen Knights", "grid_size": [12, 12], "objects": [{"type": "spawn", "x": 0, "y": 0}, {"type": "exit", "x": 11, "y": 11}, {"type": "wall", "x": 1, "y": 1}, {"type": "wall", "x": 2, "y": 1}, {"type": "wall", "x": 3, "y": 1}, {"type": "wall", "x": 4, "y": 1}, {"type": "wall", "x": 5, "y": 1}, {"type": "wall", "x": 6, "y": 1}, {"type": "wall", "x": 7, "y": 1}, {"type": "wall", "x": 8, "y": 1}, {"type": "wall", "x": 9, "y": 1}, {"type": "wall", "x": 10, "y": 1}, {"type": "wall", "x": 1, "y": 2}, {"type": "wall", "x": 2, "y": 2}, {"type": "wall", "x": 3, "y": 2}, {"type": "wall", "x": 4, "y": 2}, {"type": "wall", "x": 5, "y": 2}, {"type": "wall", "x": 6, "y": 2}, {"type": "wall", "x": 7, "y": 2}, {"type": "wall", "x": 8, "y": 2}, {"type": "wall", "x": 9, "y": 2}, {"type": "wall", "x": 1, "y": 3}, {"type": "wall", "x": 2, "y": 3}, {"type": "wall", "x": 3, "y": 3}, {"type": "wall", "x": 4, "y": 3}, {"type": "wall", "x": 5, "y": 3}, {"type": "wall", "x": 6, "y": 3}, {"type": "wall", "x": 7, "y": 3}, {"type": "wall", "x": 8, "y": 3}, {"type": "wall", "x": 1, "y": 4}, {"type": "wall", "x": 2, "y": 4}, {"type": "wall", "x": 3, "y": 4}, {"type": "wall", "x": 4, "y": 4}, {"type": "wall", "x": 5, "y": 4}, {"type": "wall", "x": 6, "y": 4}, {"type": "wall", "x": 7, "y": 4}, {"type": "wall", "x": 1, "y": 5}, {"type": "wall", "x": 2, "y": 5}, {"type": "wall", "x": 3, "y": 5}, {"type": "wall", "x": 4, "y": 5}, {"type": "wall", "x": 5, "y": 5}, {"type": "wall", "x": 6, "y": 5}, {"type": "wall", "x": 1, "y": 6}, {"type": "wall", "x": 2, "y": 6}, {"type": "wall", "x": 3, "y": 6}, {"type": "wall", "x": 4, "y": 6}, {"type": "wall", "x": 1, "y": 7}, {"type": "wall", "x": 2, "y": 7}, {"type": "wall", "x": 3, "y": 7}, {"type": "wall", "x": 1, "y": 8}, {"type": "wall", "x": 2, "y": 8}, {"type": "wall", "x": 1, "y": 9}, {"type": "enemy", "name": "Skeletal Warrior", "hp": 250, "damage": 30, "speed": 1.8, "x": 4, "y": 6}, {"type": "chest", "loot_drop_chance": 0.25, "x": 7, "y": 9}, {"type": "wall", "x": 10, "y": 3}, {"type": "wall", "x": 10, "y": 4}, {"type": "wall", "x": 10, "y": 5}, {"type": "wall", "x": 10, "y": 6}, {"type": "wall", "x": 10, "y": 7}, {"type": "wall", "x": 10, "y": 8}], "mechanics": {"game_title": "Cursed Crypts", "theme": "Dark Fantasy Dungeon Crawler", "player_hp": 100, "enemies": [{"name": "Skeletal Warrior", "hp": 250, "damage": 30, "speed": 1.8}], "loot_drop_chance": 0.25}, "narrative": {"floor_lore": "The Crypt of the Fallen Knights is a place where ancient warriors lie in eternal slumber, their souls bound to the realm of the dead. Here, the air is thick with the scent of decay and the whispers of forgotten battles echo through the stone corridors. The skeletal remains of knights who once fought for glory now rise as undead guardians, protecting the crypt's dark secrets.", "npc_dialogue": {"npc_name": "Wraith Sentinel", "quote": "You dare to tread upon sacred ground, intruder! The spirits of the fallen will not rest until your soul is claimed. Prepare to face the wrath of those who once lived and died for honor."}, "boss_intro": "As you approach the heart of the crypt, a chilling wind sweeps through the chamber, revealing the presence of an ancient knight clad in rusted armor. His eyes glow with malevolent energy as he raises his sword, ready to unleash the fury of the dead upon those who have disturbed his eternal rest."}}];
+        const OLLAMA_ENDPOINT = "http://127.0.0.1:11435/api/generate";
+        
+        let canvas, ctx;
+        let currentFloorIndex = 0;
+        const TILE_SIZE = 40;
+        const VISION_RADIUS = 3;
+        
+        let player = { x: 0, y: 0, hp: 100, maxHp: 100, atk: 15 };
+        let grid = [];
+        let exploredGrid = [];
+        let cols = 10, rows = 10;
+        let activeNpcPersona = null;
+
+        function logMessage(msg) {
+            const log = document.getElementById("combat-log");
+            if (log) {
+                log.innerHTML += `> ${msg}<br>`;
+                log.scrollTop = log.scrollHeight;
+            }
+        }
+
+        function appendChat(speaker, text) {
+            const history = document.getElementById("chat-history");
+            if (history) {
+                history.innerHTML += `<b>${speaker}:</b> ${text}<br>`;
+                history.scrollTop = history.scrollHeight;
+            }
+        }
+
+        function loadFloor(index) {
+            try {
+                if (index >= campaign.length) {
+                    alert("CONGRATULATIONS! You defeated the campaign!");
+                    currentFloorIndex = 0;
+                    player.hp = 100;
+                    loadFloor(0);
+                    return;
+                }
+                
+                const level = campaign[index];
+                cols = (level.grid_size && level.grid_size[0]) ? level.grid_size[0] : 10;
+                rows = (level.grid_size && level.grid_size[1]) ? level.grid_size[1] : 10;
+                
+                canvas.width = cols * TILE_SIZE;
+                canvas.height = rows * TILE_SIZE;
+                
+                grid = Array(rows).fill().map(() => Array(cols).fill("floor"));
+                exploredGrid = Array(rows).fill().map(() => Array(cols).fill(false));
+                
+                (level.objects || []).forEach(obj => {
+                    if (obj.x >= 0 && obj.x < cols && obj.y >= 0 && obj.y < rows) {
+                        grid[obj.y][obj.x] = obj.type;
+                        if (obj.type === "spawn") {
+                            player.x = obj.x;
+                            player.y = obj.y;
+                        }
+                    }
+                });
+
+                const nar = level.narrative || {};
+                const npc = nar.npc_dialogue || {};
+                activeNpcPersona = {
+                    name: npc.npc_name || "Dungeon Spirit",
+                    lore: nar.floor_lore || "A dark stone dungeon.",
+                    greeting: npc.quote || "Beware of what lurks in the shadows."
+                };
+
+                document.getElementById("floor-title").innerText = `Floor ${index + 1}: ${level.level_name || "Dungeon Floor"}`;
+                document.getElementById("player-hp").innerText = player.hp;
+                document.getElementById("chat-header").innerText = `💬 Chat with ${activeNpcPersona.name}`;
+                
+                document.getElementById("chat-history").innerHTML = "";
+                appendChat(activeNpcPersona.name, activeNpcPersona.greeting);
+                
+                logMessage(`<span style="color:#e5b25d">Entered Floor ${index + 1}: ${level.level_name || "Floor " + (index+1)}</span>`);
+                drawFrame();
+            } catch (err) {
+                console.error("Floor Load Error:", err);
+                document.getElementById("floor-title").innerText = "Engine Error: " + err.message;
+            }
+        }
+
+        async function sendChatMessage() {
+            const inputEl = document.getElementById("chat-input");
+            const userMsg = inputEl.value.trim();
+            if (!userMsg) return;
+
+            appendChat("Player", userMsg);
+            inputEl.value = "";
+
+            const systemPrompt = `You are an NPC named ${activeNpcPersona.name} located in a dark dungeon floor. Lore context: ${activeNpcPersona.lore}. Respond in 1-2 concise sentences. Stay strictly in character!`;
+
+            try {
+                const response = await fetch(OLLAMA_ENDPOINT, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: "qwen2.5:14b",
+                        system: systemPrompt,
+                        prompt: userMsg,
+                        stream: false,
+                        options: { temperature: 0.7 }
+                    })
+                });
+
+                if (!response.ok) throw new Error("Ollama unreachable");
+                const data = await response.json();
+                appendChat(activeNpcPersona.name, data.response || "...");
+            } catch (err) {
+                appendChat("System", "<span style="color:#ef4444">Ollama connection failed over local HTTP.</span>");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("chat-input").addEventListener("keypress", (e) => {
+                if (e.key === "Enter") sendChatMessage();
+            });
+
+            window.addEventListener("keydown", (e) => {
+                if (document.activeElement === document.getElementById("chat-input")) return;
+                if (player.hp <= 0) return;
+
+                let nextX = player.x;
+                let nextY = player.y;
+
+                if (e.key === "ArrowUp" || e.key === "w") nextY--;
+                if (e.key === "ArrowDown" || e.key === "s") nextY++;
+                if (e.key === "ArrowLeft" || e.key === "a") nextX--;
+                if (e.key === "ArrowRight" || e.key === "d") nextX++;
+
+                if (nextX < 0 || nextX >= cols || nextY < 0 || nextY >= rows) return;
+
+                const targetTile = grid[nextY][nextX];
+                if (targetTile === "wall") return; 
+
+                if (targetTile === "enemy") {
+                    const won = resolveCombat(nextX, nextY);
+                    if (!won) return;
+                }
+
+                player.x = nextX;
+                player.y = nextY;
+
+                if (targetTile === "exit") {
+                    currentFloorIndex++;
+                    loadFloor(currentFloorIndex);
+                    return;
+                }
+                
+                if (targetTile === "chest") {
+                    grid[nextY][nextX] = "floor";
+                    player.hp = Math.min(player.maxHp, player.hp + 20);
+                    document.getElementById("player-hp").innerText = player.hp;
+                    logMessage(`<span style="color:#f59e0b">Opened chest! Healed +20 HP!</span>`);
+                }
+
+                drawFrame();
+            });
+
+            canvas = document.getElementById("gameCanvas");
+            ctx = canvas.getContext("2d");
+            loadFloor(0);
+        });
+
+        function resolveCombat(enemyX, enemyY) {
+            const level = campaign[currentFloorIndex];
+            const enemyList = level.mechanics?.enemies || [{ name: "Skeletal Warrior", hp: 30, damage: 8 }];
+            
+            const enemyTemplate = enemyList[Math.floor(Math.random() * enemyList.length)];
+            let enemyHp = enemyTemplate.hp;
+            const enemyDmg = enemyTemplate.damage;
+            const enemyName = enemyTemplate.name;
+
+            logMessage(`<span style="color:#ef4444"><b>COMBAT!</b> ${enemyName} (HP: ${enemyHp}, DMG: ${enemyDmg})</span>`);
+
+            while (enemyHp > 0 && player.hp > 0) {
+                enemyHp -= player.atk;
+                logMessage(`You strike for ${player.atk} dmg! (${Math.max(0, enemyHp)} enemy HP)`);
+
+                if (enemyHp <= 0) {
+                    logMessage(`<span style="color:#10b981">Defeated ${enemyName}!</span>`);
+                    grid[enemyY][enemyX] = "floor";
+                    break;
+                }
+
+                player.hp -= enemyDmg;
+                document.getElementById("player-hp").innerText = Math.max(0, player.hp);
+                logMessage(`<span style="color:#f87171">${enemyName} hits for ${enemyDmg} dmg!</span>`);
+
+                if (player.hp <= 0) {
+                    alert("You were slain! Restarting floor...");
+                    player.hp = player.maxHp;
+                    loadFloor(currentFloorIndex);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function drawFrame() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const dist = Math.hypot(x - player.x, y - player.y);
+                    const isCurrentlyVisible = dist <= VISION_RADIUS;
+
+                    if (isCurrentlyVisible) exploredGrid[y][x] = true;
+                    const isExplored = exploredGrid[y][x];
+
+                    if (!isExplored) {
+                        ctx.fillStyle = "#000000";
+                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        continue;
+                    }
+
+                    const tile = grid[y][x];
+                    
+                    if (isCurrentlyVisible) {
+                        ctx.fillStyle = "#1e293b";
+                        if (tile === "wall") ctx.fillStyle = "#334155";
+                        else if (tile === "spawn") ctx.fillStyle = "#064e3b";
+                        else if (tile === "exit") ctx.fillStyle = "#7f1d1d";
+                    } else {
+                        ctx.fillStyle = "#0f172a";
+                        if (tile === "wall") ctx.fillStyle = "#1e293b";
+                        else if (tile === "spawn") ctx.fillStyle = "#022c22";
+                        else if (tile === "exit") ctx.fillStyle = "#450a0a";
+                    }
+                    
+                    ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    
+                    if (isCurrentlyVisible) {
+                        if (tile === "enemy") {
+                            ctx.fillStyle = "#7c3aed";
+                            ctx.beginPath();
+                            ctx.arc(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2, TILE_SIZE/3, 0, Math.PI*2);
+                            ctx.fill();
+                        }
+                        if (tile === "chest") {
+                            ctx.fillStyle = "#d97706";
+                            ctx.fillRect(x * TILE_SIZE + 8, y * TILE_SIZE + 12, TILE_SIZE - 16, TILE_SIZE - 20);
+                        }
+                    }
+                }
+            }
+            
+            // Draw Player
+            ctx.fillStyle = "#06b6d4";
+            ctx.fillRect(player.x * TILE_SIZE + 4, player.y * TILE_SIZE + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+        }
+    </script>
+</body>
+</html>

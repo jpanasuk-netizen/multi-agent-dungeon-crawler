@@ -1,0 +1,166 @@
+{
+  "level_name": "Crypt of the Fallen Knights",
+  "grid_size": [
+    12,
+    12
+  ],
+  "objects": [
+    {
+      "type": "spawn",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "type": "exit",
+      "x": 11,
+      "y": 11
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 1
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 1
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 1
+    },
+    {
+      "type": "wall",
+      "x": 4,
+      "y": 1
+    },
+    {
+      "type": "wall",
+      "x": 5,
+      "y": 1
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 1
+    },
+    {
+      "type": "wall",
+      "x": 7,
+      "y": 1
+    },
+    {
+      "type": "wall",
+      "x": 8,
+      "y": 1
+    },
+    {
+      "type": "wall",
+      "x": 9,
+      "y": 1
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 4,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 5,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 7,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 8,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 9,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 10,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 11,
+      "y": 2
+    },
+    {
+      "type": "enemy",
+      "name": "Skeletal Warrior",
+      "hp": 250,
+      "damage": 25,
+      "speed": 1.8,
+      "x": 3,
+      "y": 4
+    },
+    {
+      "type": "chest",
+      "loot_drop_chance": 0.3,
+      "x": 6,
+      "y": 7
+    },
+    {
+      "type": "enemy",
+      "name": "Skeletal Warrior",
+      "hp": 250,
+      "damage": 25,
+      "speed": 1.8,
+      "x": 9,
+      "y": 4
+    },
+    {
+      "type": "chest",
+      "loot_drop_chance": 0.3,
+      "x": 6,
+      "y": 10
+    }
+  ],
+  "mechanics": {
+    "game_title": "Cursed Crypts",
+    "theme": "Dark Fantasy Dungeon Crawler",
+    "player_hp": 100,
+    "enemies": [
+      {
+        "name": "Skeletal Warrior",
+        "hp": 250,
+        "damage": 25,
+        "speed": 1.8
+      }
+    ],
+    "loot_drop_chance": 0.3
+  },
+  "narrative": {
+    "floor_lore": "The Crypt of the Fallen Knights is a place where once mighty warriors lie in eternal slumber, their souls bound to this realm by an ancient curse. The air is thick with the stench of decay and the whispers of the dead can be heard echoing through the narrow corridors. Legend has it that those who enter seeking power or revenge never leave the same.",
+    "npc_dialogue": {
+      "npc_name": "Ghostly Sentinel",
+      "quote": "Beware, intruder! The souls of fallen knights guard this place with unyielding vigilance. Only those pure in heart may pass through to the other side."
+    },
+    "boss_intro": "As you approach the inner sanctum, a chilling wind sweeps across the chamber, extinguishing all light except for an eerie glow emanating from the center. From within the shadows emerges the skeletal form of Sir Valdrak, once a noble knight but now twisted by his own dark desires. His eyes burn with malevolent intent as he declares, 'You have trespassed into my eternal prison. Feel the wrath of a betrayed soul!'"
+  }
+}
